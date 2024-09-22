@@ -1,0 +1,6 @@
+DrissionPage==4.1.0.4
+fake-headers==1.0.2
+psutil==6.0.0
+selenium==4.25.0
+undetected-chromedriver==3.5.5
+setuptools
