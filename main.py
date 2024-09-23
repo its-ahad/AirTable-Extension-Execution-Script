@@ -26,38 +26,56 @@ def process_url(driver:uc.Chrome,wait,url:str):
     try:
         driver.maximize_window()
         driver.get(url)
-        # Click on the div with data-tutorial-selector-id="extensions"
-        extensions_div = wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-tutorial-selector-id="extensions"]'))
+        try:
+            divs = WebDriverWait(driver, 5).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.react-grid-item.react-draggable.cssTransforms.react-resizable'))
         )
-        extensions_div.click()
+        except:
+            # Click on the div with data-tutorial-selector-id="extensions"
+            extensions_div = wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-tutorial-selector-id="extensions"]'))
+            )
+            extensions_div.click()
         time.sleep(10)
 
         # Wait and get all the divs with the specified class from the container
         divs = wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.react-grid-item.react-draggable.cssTransforms.react-resizable'))
         )
-        for div in divs:
-            if 'Data Fetcher' in div.text:
-                print("Skipping 'Data Fetcher' div")
-                continue
-            print(f"Found div with text: {div.text}")
-            driver.execute_script("arguments[0].scrollIntoView();", div)
-            try:
-                iframe = div.find_element(By.TAG_NAME, 'iframe')
-                driver.switch_to.frame(iframe)
-                run_button = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
-                )
-                run_button.click()
-                WebDriverWait(driver, 300).until(
-                    EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
-                )
-                print("Run button clicked and reappeared")
-            except Exception as e:
-                print(f"An error occurred while interacting with the iframe: {e}")
-            finally:
-                driver.switch_to.default_content()
+        order = [
+            "View gained last 1 Day",
+            "View gained last 3 Days",
+            "View gained last 7 Days",
+            "Follower gained last 1 Day",
+            "Follower gained last 3 Days",
+            "Follower gained last 7 Days",
+            "Average Views last 15 Postings",
+            "Average Views last 30 Postings",
+            "Average Views last 45 Postings",
+            "Follower and Overview Table Data Sync"
+        ]
+
+        for item in order:
+            for div in divs:
+                if item == div.text:
+                    print(f"Processing div: {item}")
+                    driver.execute_script("arguments[0].scrollIntoView();", div)
+                    try:
+                        iframe = div.find_element(By.TAG_NAME, 'iframe')
+                        driver.switch_to.frame(iframe)
+                        run_button = wait.until(
+                            EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
+                        )
+                        run_button.click()
+                        WebDriverWait(driver, 8000).until(
+                            EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
+                        )
+                        print("Run button clicked and reappeared")
+                    except Exception as e:
+                        print(f"An error occurred while interacting with the iframe: {e}")
+                    finally:
+                        driver.switch_to.default_content()
+                    break
         return "success"
     except Exception as e:
         print(f"An error occurred: {e}")
