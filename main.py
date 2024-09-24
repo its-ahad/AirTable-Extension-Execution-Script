@@ -8,6 +8,8 @@ import json
 import psutil
 import time
 from colorama import Fore, Style, init
+import schedule
+
 
 PROFILES_FOLDER = pathlib.Path(__file__).parent.joinpath('profiles')
 
@@ -26,9 +28,10 @@ def process_url(driver:uc.Chrome,wait,url:str):
     try:
         driver.maximize_window()
         driver.get(url)
+        time.sleep(2)
         try:
-            divs = WebDriverWait(driver, 5).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.react-grid-item.react-draggable.cssTransforms.react-resizable'))
+            WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'div.react-grid-item.react-draggable.cssTransforms.react-resizable'))
         )
         except:
             # Click on the div with data-tutorial-selector-id="extensions"
@@ -36,30 +39,36 @@ def process_url(driver:uc.Chrome,wait,url:str):
                 EC.element_to_be_clickable((By.CSS_SELECTOR, 'div[data-tutorial-selector-id="extensions"]'))
             )
             extensions_div.click()
+            
         time.sleep(10)
 
-        # Wait and get all the divs with the specified class from the container
+       # Wait and get all the divs with the specified class from the container
         divs = wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.react-grid-item.react-draggable.cssTransforms.react-resizable'))
         )
-        order = [
+
+        # Defining the order of actions you want to take (based on the list you shared earlier)
+        actions_order = [
             "View gained last 1 Day",
-            "View gained last 3 Days",
-            "View gained last 7 Days",
             "Follower gained last 1 Day",
+            "View gained last 3 Days",
             "Follower gained last 3 Days",
+            "View gained last 7 Days",
             "Follower gained last 7 Days",
             "Average Views last 15 Postings",
             "Average Views last 30 Postings",
-            "Average Views last 45 Postings",
-            "Follower and Overview Table Data Sync"
+            "Average Views last 45 Postings"
         ]
-
-        for item in order:
+        for action in actions_order:
             for div in divs:
-                if item == div.text:
-                    print(f"Processing div: {item}")
+                div_text = div.text.strip()
+                if 'Data Fetcher' in div_text:
+                    continue
+                
+                if action == div_text:
+                    print(f"Processing div with action: {action}")
                     driver.execute_script("arguments[0].scrollIntoView();", div)
+                    time.sleep(5)
                     try:
                         iframe = div.find_element(By.TAG_NAME, 'iframe')
                         driver.switch_to.frame(iframe)
@@ -67,7 +76,7 @@ def process_url(driver:uc.Chrome,wait,url:str):
                             EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
                         )
                         run_button.click()
-                        WebDriverWait(driver, 8000).until(
+                        WebDriverWait(driver, 80000).until(
                             EC.element_to_be_clickable((By.XPATH, '//span[text()="Run"]'))
                         )
                         print("Run button clicked and reappeared")
@@ -75,13 +84,13 @@ def process_url(driver:uc.Chrome,wait,url:str):
                         print(f"An error occurred while interacting with the iframe: {e}")
                     finally:
                         driver.switch_to.default_content()
-                    break
+
         return "success"
     except Exception as e:
         print(f"An error occurred: {e}")
         return "fail"
 
-def start():
+def process_pages(pages):
     # Load credentials from the JSON file with exception handling
     try:
         with open('credentials.json', 'r') as file:
@@ -104,37 +113,25 @@ def start():
     chrome_options = uc.ChromeOptions()
     chrome_options.add_argument(f"--user-data-dir={user_profile_path}")
     driver = uc.Chrome(options=chrome_options)
-    wait = WebDriverWait(driver, 60)
-
-    def read_urls(file_path: str) -> list:
-        try:
-            with open(file_path, 'r') as file:
-                urls = file.read().splitlines()
-            return urls
-        except FileNotFoundError:
-            print(f"Error: The file '{file_path}' was not found.")
-            return []
-        except Exception as e:
-            print(f"An error occurred while reading the file '{file_path}': {e}")
-            return []
-
-    urls = read_urls('urls.txt')
-    for url in urls:
+    wait = WebDriverWait(driver, 360)
+    for page in pages:
         try:
             init(autoreset=True)
-            print(f"{Fore.CYAN}Processing URL: {url}")
-            result = process_url(driver, wait, url)
+            print(f"{Fore.CYAN}Processing URL: {page}")
+            result = process_url(driver, wait, page)
             if result == "success":
-                print(f"{Fore.GREEN}Processed URL: {url} - {result}")
+                print(f"{Fore.GREEN}Processed URL: {page} - {result}")
             else:
-                print(f"{Fore.RED}Processed URL: {url} - {result}")
+                print(f"{Fore.RED}Processed URL: {page} - {result}")
         except Exception as e:
-                print(f"{Fore.RED}An error occurred while processing URL: {url} - {e}")
-
+                print(f"{Fore.RED}An error occurred while processing URL: {page} - {e}")
     driver.quit()
 
+# Schedule tasks
+schedule.every().day.at("01:00").do(process_pages, ["https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide", "https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide", "https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide"])
+schedule.every().day.at("04:00").do(process_pages, ["https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide", "https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide", "https://airtable.com/appuJhJIynMNeaDAo/tblyrm0NCmCx6iJAE/viwQLT8J8URyD4vHx?blocks=hide"])
 
-
-if __name__ == '__main__':
-    kill_chrome()
-    start()
+# Keep the script running
+while True:
+    schedule.run_pending()
+    time.sleep(1)
